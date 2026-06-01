@@ -1,3 +1,4 @@
+# Unity generated
 Library/
 Temp/
 Logs/
@@ -5,5 +6,24 @@ obj/
 Build/
 Builds/
 UserSettings/
+
+# Visual Studio / Rider
 *.sln
 *.csproj
+*.slnx
+.vs/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+
+# Gros assets binaires (utiliser Git LFS à la place)
+*.tif
+*.tiff
+*.psd
+*.fbx
+*.FBX
