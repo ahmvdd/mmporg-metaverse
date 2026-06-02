@@ -164,6 +164,5 @@ public class GameServer : MonoBehaviour
     {
         isRunning = false;
         serveur?.Stop();
-        serverThread?.Abort();
     }
 }
