@@ -44,8 +44,10 @@ public class CharacterController : MonoBehaviour
         Anim.SetFloat("Walk", vec.y);
 
         rb.MovePosition(rb.position + transform.forward * WalkSpeed * Time.fixedDeltaTime * vec.y);
-
         rb.MoveRotation(rb.rotation * Quaternion.AngleAxis(RotateSpeed * Time.fixedDeltaTime * vec.x, Vector3.up));
+
+        if (vec != Vector2.zero && NetworkManager.Instance != null)
+            NetworkManager.Instance.SendPosition(rb.position, rb.rotation.eulerAngles.y);
     }
 
     void OnDisable() {
