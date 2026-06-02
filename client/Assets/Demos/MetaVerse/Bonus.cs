@@ -4,11 +4,11 @@ public class Bonus : MonoBehaviour
 {
     public LayerMask CollisionLayers;
     public int Points = 1;
+    public string BonusId;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        
+        BonusId = gameObject.name + "_" + transform.position.x + "_" + transform.position.z;
     }
 
     // Update is called once per frame
