@@ -9,7 +9,7 @@ public class NetworkManager : MonoBehaviour
     public string ServerIP = "127.0.0.1";
     public int ServerPort = 5555;
     public GameObject RemotePlayerPrefab;
-
+    public TCPClient NetworkClient;
     public string PlayerId { get; private set; }
 
     TCPClient tcp;
@@ -98,5 +98,45 @@ public class NetworkManager : MonoBehaviour
         if (tcp != null && tcp.IsConnected)
             tcp.SendTCPMessage($"DISCONNECT|{PlayerId}");
         tcp?.Close();
+    }
+
+    void Awake()
+    {
+        if (Instance != null) { Destroy(gameObject); return; }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+
+        if (string.IsNullOrEmpty(PlayerId))
+            PlayerId = "player_" + System.Guid.NewGuid().ToString("N").Substring(0, 8);
+    }
+
+    public bool Connect(string ip, int port)
+    {
+        NetworkClient.DestinationIP = ip;
+        NetworkClient.DestinationPort = port;
+        bool ok = NetworkClient.Connect(OnMessageReceived);
+        if (ok) SendConnect();
+        return ok;
+    }
+
+    public void Send(string message)
+    {
+        if (NetworkClient != null && NetworkClient.IsConnected)
+            NetworkClient.SendTCPMessage(message);
+    }
+
+    void SendConnect()
+    {
+        Send("CONNECT|" + PlayerId);
+    }
+
+    void OnMessageReceived(string message)
+    {
+        Debug.Log("[Server] " + message);
+    }
+
+    void OnDisable()
+    {
+        if (NetworkClient != null) NetworkClient.Close();
     }
 }
