@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System;
 
 public enum CharacterPlayer {
   Player1,
@@ -11,14 +12,15 @@ public class CharacterController : MonoBehaviour
     public CharacterPlayer Player = CharacterPlayer.Player1;
     public float WalkSpeed = 3;
     public float RotateSpeed = 250;
+
     Animator Anim;
     MetaverseInput inputs;
     InputAction PlayerAction;
     Rigidbody rb;
 
+    float moveTimer;
+    const float MoveInterval = 0.05f; // 50ms
 
-
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         Anim = GetComponent<Animator>();
@@ -33,11 +35,9 @@ public class CharacterController : MonoBehaviour
         }
 
         PlayerAction.Enable();
-
         rb = GetComponent<Rigidbody>();
     }
 
-    // Update is called once per frame
     void FixedUpdate()
     {
         Vector2 vec = PlayerAction.ReadValue<Vector2>();
@@ -46,8 +46,23 @@ public class CharacterController : MonoBehaviour
         rb.MovePosition(rb.position + transform.forward * WalkSpeed * Time.fixedDeltaTime * vec.y);
         rb.MoveRotation(rb.rotation * Quaternion.AngleAxis(RotateSpeed * Time.fixedDeltaTime * vec.x, Vector3.up));
 
-        if (vec != Vector2.zero && NetworkManager.Instance != null)
-            NetworkManager.Instance.SendPosition(rb.position, rb.rotation.eulerAngles.y);
+        moveTimer += Time.fixedDeltaTime;
+        if (moveTimer >= MoveInterval)
+        {
+            moveTimer = 0f;
+            SendPosition();
+        }
+    }
+
+    void SendPosition()
+    {
+        if (NetworkManager.Instance == null) return;
+
+        Vector3 pos = rb.position;
+        float rotY = rb.rotation.eulerAngles.y;
+        string msg = string.Format("MOVE|{0}|{1:F3}|{2:F3}|{3:F3}|{4:F3}",
+            NetworkManager.Instance.PlayerId, pos.x, pos.y, pos.z, rotY);
+        NetworkManager.Instance.Send(msg);
     }
 
     void OnDisable() {
