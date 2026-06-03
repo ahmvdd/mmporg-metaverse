@@ -1,8 +1,29 @@
-public class CollectableManager : MonoBehaviour {
-    public NetworkManager networkManager; // Glissez l'objet dans l'inspecteur
+using UnityEngine;
+using System.Collections.Generic;
 
-    public void RequestCollect(string bonusId) {
+public class CollectableManager : MonoBehaviour
+{
+
+    private HashSet<string> collectedObjects = new HashSet<string>();
+
+    public bool TryCollect(string bonusId, out string result)
+    {
+        lock (collectedObjects)
+        {
+            if (!collectedObjects.Contains(bonusId))
+            {
+                collectedObjects.Add(bonusId);
+                result = bonusId;
+                return true;
+            }
+            result = "";
+            return false;
+        }
+    }
+
+    public void RequestCollect(string bonusId)
+    {
         // Envoi au serveur pour validation
-        networkManager.SendMessage($"COLLECT|{bonusId}");
+        Debug.Log($"Demande de collecte : {bonusId}");
     }
 }
