@@ -8,13 +8,12 @@ TcpListener serveur = new TcpListener(IPAddress.Any, 5555);
 serveur.Start();
 
 List<TcpClient> clients = new List<TcpClient>();
-
 while (true)
 {
     TcpClient client = await serveur.AcceptTcpClientAsync();
     clients.Add(client);
     Console.WriteLine($"Nouveau joueur connecté ! Total : {clients.Count}");
-    
+
     // Gérer ce client dans un thread séparé
     _ = Task.Run(() => GererClient(client, clients));
 }
