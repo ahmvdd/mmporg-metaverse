@@ -78,8 +78,16 @@ public class NetworkManager : MonoBehaviour
                         new Vector3(x, y, z), Quaternion.identity);
                     remotePlayers[id] = go;
                 }
-                remotePlayers[id].transform.position = new Vector3(x, y, z);
-                remotePlayers[id].transform.rotation = Quaternion.Euler(0, rot, 0);
+                remotePlayers[id].transform.position = Vector3.Lerp(
+                    remotePlayers[id].transform.position,
+                    new Vector3(x, y, z),
+                    10f * Time.deltaTime
+                );
+                remotePlayers[id].transform.rotation = Quaternion.Lerp(
+                    remotePlayers[id].transform.rotation,
+                    Quaternion.Euler(0, rot, 0),
+                    10f * Time.deltaTime
+                );
                 break;
 
             case "DISCONNECT":
