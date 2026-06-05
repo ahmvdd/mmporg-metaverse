@@ -12,36 +12,48 @@ public class NetworkManager : MonoBehaviour
     public TCPClient NetworkClient;
     public string PlayerId { get; private set; }
 
-    TCPClient tcp;
     Dictionary<string, GameObject> remotePlayers = new Dictionary<string, GameObject>();
 
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
-        PlayerId = System.Guid.NewGuid().ToString("N").Substring(0, 8);
+        DontDestroyOnLoad(gameObject);
+        PlayerId = "player_" + System.Guid.NewGuid().ToString("N").Substring(0, 8);
     }
 
     void Start()
     {
-        tcp = GetComponent<TCPClient>();
-        tcp.DestinationIP = ServerIP;
-        tcp.DestinationPort = ServerPort;
-        bool ok = tcp.Connect(OnMessageReceived);
+        if (NetworkClient == null)
+            NetworkClient = GetComponent<TCPClient>();
+    }
+
+    public bool Connect(string ip, int port)
+    {
+        NetworkClient.DestinationIP = ip;
+        NetworkClient.DestinationPort = port;
+        bool ok = NetworkClient.Connect(OnMessageReceived);
         if (ok)
         {
-            tcp.SendTCPMessage($"CONNECT|{PlayerId}");
-            Debug.Log($"Connecté au serveur en tant que {PlayerId}");
+            Send($"CONNECT|{PlayerId}");
+            Debug.Log($"Connecté en tant que {PlayerId}");
         }
         else
-            Debug.LogWarning("Connexion au serveur échouée.");
+            Debug.LogWarning("Connexion échouée.");
+        return ok;
+    }
+
+    public void Send(string message)
+    {
+        if (NetworkClient != null && NetworkClient.IsConnected)
+            NetworkClient.SendTCPMessage(message);
     }
 
     public void SendPosition(Vector3 pos, float rotY)
     {
-        if (!tcp.IsConnected) return;
-        tcp.SendTCPMessage(string.Format(CultureInfo.InvariantCulture,
-            "MOVE|{0}|{1}|{2}|{3}|{4}", PlayerId, pos.x, pos.y, pos.z, rotY));
+        Send(string.Format(CultureInfo.InvariantCulture,
+            "MOVE|{0}|{1:F2}|{2:F2}|{3:F2}|{4:F2}",
+            PlayerId, pos.x, pos.y, pos.z, rotY));
     }
 
     void OnMessageReceived(string message)
@@ -61,15 +73,15 @@ public class NetworkManager : MonoBehaviour
                 {
                     GameObject go = Instantiate(RemotePlayerPrefab, Vector3.zero, Quaternion.identity);
                     remotePlayers[id] = go;
-                    Debug.Log($"Nouveau joueur distant : {id}");
+                    Debug.Log($"Joueur distant connecté : {id}");
                 }
                 break;
 
             case "MOVE":
                 if (parts.Length < 6) return;
-                float x   = float.Parse(parts[2], CultureInfo.InvariantCulture);
-                float y   = float.Parse(parts[3], CultureInfo.InvariantCulture);
-                float z   = float.Parse(parts[4], CultureInfo.InvariantCulture);
+                float x = float.Parse(parts[2], CultureInfo.InvariantCulture);
+                float y = float.Parse(parts[3], CultureInfo.InvariantCulture);
+                float z = float.Parse(parts[4], CultureInfo.InvariantCulture);
                 float rot = float.Parse(parts[5], CultureInfo.InvariantCulture);
 
                 if (!remotePlayers.ContainsKey(id))
@@ -95,56 +107,25 @@ public class NetworkManager : MonoBehaviour
                 {
                     Destroy(remotePlayers[id]);
                     remotePlayers.Remove(id);
-                    Debug.Log($"Joueur distant déconnecté : {id}");
                 }
+                break;
+
+            case "COLLECT_OK":
+                if (parts.Length < 3) return;
+                CollectableManager.Instance?.OnCollectOK(parts[1], parts[2]);
+                break;
+
+            case "COLLECT_DENIED":
+                if (parts.Length < 3) return;
+                CollectableManager.Instance?.OnCollectDenied(parts[1], parts[2]);
                 break;
         }
     }
 
     void OnDisable()
     {
-        if (tcp != null && tcp.IsConnected)
-            tcp.SendTCPMessage($"DISCONNECT|{PlayerId}");
-        tcp?.Close();
-    }
-
-    void Awake()
-    {
-        if (Instance != null) { Destroy(gameObject); return; }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-
-        if (string.IsNullOrEmpty(PlayerId))
-            PlayerId = "player_" + System.Guid.NewGuid().ToString("N").Substring(0, 8);
-    }
-
-    public bool Connect(string ip, int port)
-    {
-        NetworkClient.DestinationIP = ip;
-        NetworkClient.DestinationPort = port;
-        bool ok = NetworkClient.Connect(OnMessageReceived);
-        if (ok) SendConnect();
-        return ok;
-    }
-
-    public void Send(string message)
-    {
         if (NetworkClient != null && NetworkClient.IsConnected)
-            NetworkClient.SendTCPMessage(message);
-    }
-
-    void SendConnect()
-    {
-        Send("CONNECT|" + PlayerId);
-    }
-
-    void OnMessageReceived(string message)
-    {
-        Debug.Log("[Server] " + message);
-    }
-
-    void OnDisable()
-    {
-        if (NetworkClient != null) NetworkClient.Close();
+            Send($"DISCONNECT|{PlayerId}");
+        NetworkClient?.Close();
     }
 }
