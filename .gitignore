@@ -1,3 +1,21 @@
 server/bin/
 server/obj/
 .DS_Store
+
+# Unity auto-generated (racine du repo)
+Library/
+Logs/
+Temp/
+Packages/
+ProjectSettings/
+UserSettings/
+
+# Unity auto-generated (dans Assets)
+client/Assets/Demos/MetaVerse/Library/
+client/Assets/Demos/MetaVerse/Logs*/
+client/Assets/Demos/MetaVerse/Packages/
+client/Assets/Demos/MetaVerse/ProjectSettings/
+client/Assets/Demos/MetaVerse/UserSettings*/
+client/Assets/Demos/MetaVerse/Assets.meta
+client/Assets/_Recovery/
+client/Assets/_Recovery.meta
