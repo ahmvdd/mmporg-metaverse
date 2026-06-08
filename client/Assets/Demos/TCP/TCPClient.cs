@@ -34,7 +34,7 @@ public class TCPClient : MonoBehaviour
     }
 
     public void SendTCPMessage(string message) {
-        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message + "\n");
         SendTCPBytes(bytes);
     }
 
@@ -91,8 +91,13 @@ public class TCPClient : MonoBehaviour
     }
 
     private void ParseString(byte[] bytes) {
-        string message = System.Text.Encoding.UTF8.GetString(bytes);
-        OnMessageReceive.Invoke(message);
+        string raw = System.Text.Encoding.UTF8.GetString(bytes);
+        foreach (string line in raw.Split('\n'))
+        {
+            string trimmed = line.Trim();
+            if (trimmed.Length > 0)
+                OnMessageReceive.Invoke(trimmed);
+        }
     }
 
     private void CloseTCP() {

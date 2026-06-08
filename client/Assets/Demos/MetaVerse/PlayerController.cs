@@ -7,7 +7,7 @@ public enum CharacterPlayer {
   Player2
 }
 
-public class CharacterController : MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
     public CharacterPlayer Player = CharacterPlayer.Player1;
     public float WalkSpeed = 3;

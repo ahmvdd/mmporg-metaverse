@@ -62,8 +62,22 @@ public class NetworkManager : MonoBehaviour
         if (parts.Length < 2) return;
 
         string type = parts[0];
-        string id = parts[1];
 
+        // COLLECT_OK/DENIED must reach the local player too — process before the id filter
+        switch (type)
+        {
+            case "COLLECT_OK":
+                if (parts.Length < 3) return;
+                CollectableManager.Instance?.OnCollectOK(parts[1], parts[2]);
+                return;
+
+            case "COLLECT_DENIED":
+                if (parts.Length < 3) return;
+                CollectableManager.Instance?.OnCollectDenied(parts[1], parts[2]);
+                return;
+        }
+
+        string id = parts[1];
         if (id == PlayerId) return;
 
         switch (type)
@@ -108,16 +122,6 @@ public class NetworkManager : MonoBehaviour
                     Destroy(remotePlayers[id]);
                     remotePlayers.Remove(id);
                 }
-                break;
-
-            case "COLLECT_OK":
-                if (parts.Length < 3) return;
-                CollectableManager.Instance?.OnCollectOK(parts[1], parts[2]);
-                break;
-
-            case "COLLECT_DENIED":
-                if (parts.Length < 3) return;
-                CollectableManager.Instance?.OnCollectDenied(parts[1], parts[2]);
                 break;
         }
     }
