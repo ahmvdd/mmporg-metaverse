@@ -14,6 +14,9 @@ public class NetworkManager : MonoBehaviour
 
     Dictionary<string, GameObject> remotePlayers = new Dictionary<string, GameObject>();
 
+    private readonly Queue<string> messageQueue = new Queue<string>();
+    private readonly object queueLock = new object();
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -26,6 +29,21 @@ public class NetworkManager : MonoBehaviour
     {
         if (NetworkClient == null)
             NetworkClient = GetComponent<TCPClient>();
+    }
+
+    void Update()
+    {
+        while (true)
+        {
+            string msg = null;
+            lock (queueLock)
+            {
+                if (messageQueue.Count > 0)
+                    msg = messageQueue.Dequeue();
+            }
+            if (msg == null) break;
+            ProcessMessage(msg);
+        }
     }
 
     public bool Connect(string ip, int port)
@@ -58,12 +76,19 @@ public class NetworkManager : MonoBehaviour
 
     void OnMessageReceived(string message)
     {
+        lock (queueLock)
+        {
+            messageQueue.Enqueue(message);
+        }
+    }
+
+    void ProcessMessage(string message)
+    {
         string[] parts = message.Trim().Split('|');
         if (parts.Length < 2) return;
 
         string type = parts[0];
 
-        // COLLECT_OK/DENIED must reach the local player too — process before the id filter
         switch (type)
         {
             case "COLLECT_OK":
@@ -74,6 +99,29 @@ public class NetworkManager : MonoBehaviour
             case "COLLECT_DENIED":
                 if (parts.Length < 3) return;
                 CollectableManager.Instance?.OnCollectDenied(parts[1], parts[2]);
+                return;
+
+            case "CAR_MOVE":
+                if (parts.Length < 6) return;
+                if (!int.TryParse(parts[1].Replace("car_", ""), out int carIndex)) return;
+                float carX = float.Parse(parts[2], CultureInfo.InvariantCulture);
+                float carY = float.Parse(parts[3], CultureInfo.InvariantCulture);
+                float carZ = float.Parse(parts[4], CultureInfo.InvariantCulture);
+                float carRot = float.Parse(parts[5], CultureInfo.InvariantCulture);
+                GameObject carObj = CarSyncManager.Instance?.GetCar(carIndex);
+                if (carObj != null)
+                {
+                    carObj.transform.position = Vector3.Lerp(
+                        carObj.transform.position,
+                        new Vector3(carX, carY, carZ),
+                        10f * Time.deltaTime
+                    );
+                    carObj.transform.rotation = Quaternion.Lerp(
+                        carObj.transform.rotation,
+                        Quaternion.Euler(0, carRot, 0),
+                        10f * Time.deltaTime
+                    );
+                }
                 return;
         }
 
@@ -104,16 +152,10 @@ public class NetworkManager : MonoBehaviour
                         new Vector3(x, y, z), Quaternion.identity);
                     remotePlayers[id] = go;
                 }
-                remotePlayers[id].transform.position = Vector3.Lerp(
-                    remotePlayers[id].transform.position,
-                    new Vector3(x, y, z),
-                    10f * Time.deltaTime
-                );
-                remotePlayers[id].transform.rotation = Quaternion.Lerp(
-                    remotePlayers[id].transform.rotation,
-                    Quaternion.Euler(0, rot, 0),
-                    10f * Time.deltaTime
-                );
+
+                RemotePlayer rp = remotePlayers[id].GetComponent<RemotePlayer>();
+                if (rp != null)
+                    rp.SetTarget(x, y, z, rot);
                 break;
 
             case "DISCONNECT":

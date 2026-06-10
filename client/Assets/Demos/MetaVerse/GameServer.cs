@@ -10,6 +10,8 @@ public class GameServer : MonoBehaviour
 {
     public static GameServer Instance;
 
+    public bool IsRunning => isRunning;
+
     private TcpListener serveur;
     private Thread serverThread;
     private bool isRunning = false;
@@ -17,15 +19,31 @@ public class GameServer : MonoBehaviour
     private List<TcpClient> clients = new List<TcpClient>();
     private Dictionary<TcpClient, string> clientIds = new Dictionary<TcpClient, string>();
 
-    // Pour les race conditions sur les collectables
     private HashSet<string> collectedObjects = new HashSet<string>();
+
+    private Queue<System.Action> mainThreadQueue = new Queue<System.Action>();
+    private readonly object mainThreadLock = new object();
 
     void Awake()
     {
         Instance = this;
     }
 
-    // Appelé par le bouton "Héberger" dans ConnectionUI
+    void Update()
+    {
+        while (true)
+        {
+            System.Action action = null;
+            lock (mainThreadLock)
+            {
+                if (mainThreadQueue.Count > 0)
+                    action = mainThreadQueue.Dequeue();
+            }
+            if (action == null) break;
+            action();
+        }
+    }
+
     public void StartServer(int port = 5555)
     {
         isRunning = true;
@@ -83,6 +101,10 @@ public class GameServer : MonoBehaviour
                         Broadcast(line, client);
                         break;
 
+                    case "CAR_MOVE":
+                        Broadcast(line, client);
+                        break;
+
                     case "DISCONNECT":
                         BroadcastAll(line);
                         break;
@@ -108,7 +130,6 @@ public class GameServer : MonoBehaviour
         }
     }
 
-    // Race condition — premier arrivé premier servi
     void HandleCollect(string[] parts, TcpClient expediteur)
     {
         string playerId = parts[1];
@@ -120,12 +141,27 @@ public class GameServer : MonoBehaviour
             {
                 collectedObjects.Add(objectId);
                 BroadcastAll($"COLLECT_OK|{playerId}|{objectId}");
+
+                lock (mainThreadLock)
+                {
+                    mainThreadQueue.Enqueue(() => StartCoroutine(ResetBonus(objectId, 5f)));
+                }
             }
             else
             {
                 SendTo(expediteur, $"COLLECT_DENIED|{playerId}|{objectId}");
             }
         }
+    }
+
+    private System.Collections.IEnumerator ResetBonus(string objectId, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        lock (collectedObjects)
+        {
+            collectedObjects.Remove(objectId);
+        }
+        Debug.Log($"Bonus réinitialisé : {objectId}");
     }
 
     void Broadcast(string message, TcpClient expediteur)

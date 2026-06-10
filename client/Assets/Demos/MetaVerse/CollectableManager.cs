@@ -5,47 +5,38 @@ public class CollectableManager : MonoBehaviour
 {
     public static CollectableManager Instance { get; private set; }
 
-    private Dictionary<string, bool> collectables = new Dictionary<string, bool>();
     private readonly object _lock = new object();
 
     void Awake()
     {
         Instance = this;
     }
-
-    public bool TryCollect(string bonusId, out string resultMessage)
-    {
-        lock (_lock)
-        {
-            if (collectables.ContainsKey(bonusId) && collectables[bonusId])
-            {
-                collectables[bonusId] = false;
-                resultMessage = $"SUCCESS|{bonusId}";
-                return true;
-            }
-            resultMessage = $"FAILED|{bonusId}";
-            return false;
-        }
-    }
-
+    //changement ici aussi faut fixer au niveau du prefab bonus
     public void OnCollectOK(string playerId, string bonusId)
-    {
-        if (playerId == NetworkManager.Instance?.PlayerId)
-            ScoreManager.Instance?.AddScore(1);
+{
+    if (playerId == NetworkManager.Instance?.PlayerId)
+        ScoreManager.Instance?.AddScore(1);
 
-        Bonus[] allBonuses = FindObjectsByType<Bonus>(FindObjectsSortMode.None);
-        foreach (Bonus b in allBonuses)
+    Bonus[] allBonuses = FindObjectsByType<Bonus>(FindObjectsSortMode.None);
+    foreach (Bonus b in allBonuses)
+    {
+        if (b.BonusId == bonusId)
         {
-            if (b.BonusId == bonusId)
-            {
-                b.gameObject.SetActive(false);
-                break;
-            }
+            StartCoroutine(RespawnBonus(b.gameObject, 5f));
+            break;
         }
     }
-
-    public void OnCollectDenied(string playerId, string bonusId)
-    {
-        Debug.Log($"Collect refusé : {playerId} -> {bonusId}");
     }
-}
+
+    private System.Collections.IEnumerator RespawnBonus(GameObject bonus, float delay)
+    {
+        bonus.SetActive(false);
+        yield return new WaitForSeconds(delay);
+        bonus.SetActive(true);
+    }
+
+        public void OnCollectDenied(string playerId, string bonusId)
+        {
+            Debug.Log($"Collect refusé : {playerId} -> {bonusId}");
+        }
+    }
