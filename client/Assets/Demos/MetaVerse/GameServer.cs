@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Net;
 using System.Net.Sockets;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 using System.Collections.Generic;
@@ -49,11 +50,31 @@ public class GameServer : MonoBehaviour
         isRunning = true;
         serveur = new TcpListener(IPAddress.Any, port);
         serveur.Start();
-        Debug.Log($"Serveur démarré sur le port {port}");
+
+        // Log toutes les IPs locales pour que l'hôte puisse les partager avec ses amis
+        string localIPs = GetLocalIPAddresses();
+        Debug.Log($"=== SERVEUR DÉMARRÉ ===\nPort : {port}\nIPs locales :\n{localIPs}\n=> Ton ami doit utiliser l'une de ces IPs pour rejoindre.");
 
         serverThread = new Thread(AcceptClients);
         serverThread.IsBackground = true;
         serverThread.Start();
+    }
+
+    private string GetLocalIPAddresses()
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
+        {
+            if (ni.OperationalStatus != OperationalStatus.Up) continue;
+            if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+
+            foreach (UnicastIPAddressInformation addr in ni.GetIPProperties().UnicastAddresses)
+            {
+                if (addr.Address.AddressFamily == AddressFamily.InterNetwork)
+                    sb.AppendLine($"  [{ni.Name}] {addr.Address}");
+            }
+        }
+        return sb.Length > 0 ? sb.ToString() : "  (aucune IP trouvée)";
     }
 
     void AcceptClients()
