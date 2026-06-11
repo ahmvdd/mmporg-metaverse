@@ -1,0 +1,74 @@
+# =====================
+# Unity - Generated
+# =====================
+Library/
+Temp/
+Logs/
+obj/
+Build/
+Builds/
+UserSettings/
+MemoryCaptures/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.booproj
+sysinfo.txt
+*.apk
+*.aab
+*.ipa
+*.unitypackage
+*.unitypackage.meta
+
+# Unity auto-generated C# wrappers
+Assets/Plugins/Editor/JetBrains*
+
+# Crash reports
+crashlytics-build.properties
+
+# =====================
+# IDE
+# =====================
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+
+# =====================
+# OS
+# =====================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# =====================
+# Claude Code
+# =====================
+.claude/
+
+# =====================
+# Gros assets binaires (utiliser Git LFS)
+# =====================
+*.tif
+*.tiff
+*.psd
+*.fbx
+*.FBX
+*.mp3
+*.wav
+*.ogg
+*.mp4
+*.mov
+*.avi
