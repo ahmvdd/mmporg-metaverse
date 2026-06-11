@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Net;
 using System.Net.Sockets;
 
 public class TCPClient : MonoBehaviour
@@ -8,7 +7,6 @@ public class TCPClient : MonoBehaviour
     public string DestinationIP = "127.0.0.1";
 
     TcpClient tcp;
-    IPEndPoint localEP;
 
     public delegate void TCPMessageReceive(string message);
 
@@ -86,12 +84,14 @@ public class TCPClient : MonoBehaviour
 
         while (tcp.Available > 0)
         {
-            byte[] data = new byte[tcp.Available];
-            tcp.GetStream().Read(data, 0, tcp.Available);
+            int available = tcp.Available;
+            byte[] data = new byte[available];
+            int read = tcp.GetStream().Read(data, 0, available);
 
             try
             {
-                ParseString(data);
+                if (read > 0)
+                    ParseString(data, read);
             }
             catch (System.Exception ex)
             {
@@ -100,8 +100,8 @@ public class TCPClient : MonoBehaviour
         }
     }
 
-    private void ParseString(byte[] bytes) {
-        string raw = System.Text.Encoding.UTF8.GetString(bytes);
+    private void ParseString(byte[] bytes, int length = -1) {
+        string raw = System.Text.Encoding.UTF8.GetString(bytes, 0, length < 0 ? bytes.Length : length);
         foreach (string line in raw.Split('\n'))
         {
             string trimmed = line.Trim();
