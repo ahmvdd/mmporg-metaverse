@@ -60,7 +60,7 @@ public class GameServer : MonoBehaviour
         serverThread.Start();
     }
 
-    private string GetLocalIPAddresses()
+    public string GetLocalIPAddresses()
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
