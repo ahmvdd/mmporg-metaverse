@@ -11654,9 +11654,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa75e654a588a49889033f586f0baca3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarSyncer
-  CarId: 
-  sendTimer: 0
-  sendInterval: 0.1
 --- !u!1001 &187988813
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -24981,9 +24978,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa75e654a588a49889033f586f0baca3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarSyncer
-  CarId: 
-  sendTimer: 0
-  sendInterval: 0.1
 --- !u!1001 &429627926
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -28672,9 +28666,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa75e654a588a49889033f586f0baca3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarSyncer
-  CarId: 
-  sendTimer: 0
-  sendInterval: 0.1
 --- !u!1001 &496734358
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -30178,9 +30169,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa75e654a588a49889033f586f0baca3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarSyncer
-  CarId: 
-  sendTimer: 0
-  sendInterval: 0.1
 --- !u!1001 &521209838
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -69266,9 +69254,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa75e654a588a49889033f586f0baca3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarSyncer
-  CarId: 
-  sendTimer: 0
-  sendInterval: 0.1
 --- !u!1001 &1180736624
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -90748,9 +90733,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa75e654a588a49889033f586f0baca3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarSyncer
-  CarId: 
-  sendTimer: 0
-  sendInterval: 0.1
 --- !u!1001 &1521346113
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -91243,9 +91225,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa75e654a588a49889033f586f0baca3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarSyncer
-  CarId: 
-  sendTimer: 0
-  sendInterval: 0.1
 --- !u!1001 &1533308280
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -93657,6 +93636,7 @@ MonoBehaviour:
   PortInput: {fileID: 1661453085}
   ConnectButton: {fileID: 1056283447}
   HostButton: {fileID: 1630762263}
+  StatusText: {fileID: 1406930296}
 --- !u!114 &1568424402
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -104344,9 +104324,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa75e654a588a49889033f586f0baca3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarSyncer
-  CarId: 
-  sendTimer: 0
-  sendInterval: 0.1
 --- !u!1001 &1756768973
 PrefabInstance:
   m_ObjectHideFlags: 0
