@@ -114,6 +114,13 @@ public class GameServer : MonoBehaviour
                 {
                     case "CONNECT":
                         playerId = parts[1];
+                        // Envoie les joueurs déjà connectés au nouveau venu
+                        lock (clientIds)
+                        {
+                            foreach (var kvp in clientIds)
+                                if (kvp.Value != "")
+                                    SendTo(client, $"CONNECT|{kvp.Value}");
+                        }
                         lock (clientIds) { clientIds[client] = playerId; }
                         Broadcast(line, client);
                         break;

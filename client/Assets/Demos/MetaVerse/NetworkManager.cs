@@ -131,12 +131,7 @@ public class NetworkManager : MonoBehaviour
         switch (type)
         {
             case "CONNECT":
-                if (!remotePlayers.ContainsKey(id))
-                {
-                    GameObject go = Instantiate(RemotePlayerPrefab, Vector3.zero, Quaternion.identity);
-                    remotePlayers[id] = go;
-                    Debug.Log($"Joueur distant connecté : {id}");
-                }
+                Debug.Log($"Joueur distant annoncé : {id}");
                 break;
 
             case "MOVE":
