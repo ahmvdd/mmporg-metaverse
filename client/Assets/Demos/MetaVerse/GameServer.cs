@@ -84,6 +84,7 @@ public class GameServer : MonoBehaviour
             try
             {
                 TcpClient client = serveur.AcceptTcpClient();
+                client.NoDelay = true;
                 lock (clients) { clients.Add(client); }
                 Debug.Log($"Nouveau joueur ! Total : {clients.Count}");
 
@@ -108,20 +109,17 @@ public class GameServer : MonoBehaviour
                 string[] parts = line.Split('|');
                 string type = parts[0];
 
-                Debug.Log($"Reçu : {line}");
-
                 switch (type)
                 {
                     case "CONNECT":
                         playerId = parts[1];
-                        // Envoie les joueurs déjà connectés au nouveau venu
                         lock (clientIds)
                         {
                             foreach (var kvp in clientIds)
                                 if (kvp.Value != "")
                                     SendTo(client, $"CONNECT|{kvp.Value}");
+                            clientIds[client] = playerId;
                         }
-                        lock (clientIds) { clientIds[client] = playerId; }
                         Broadcast(line, client);
                         break;
 

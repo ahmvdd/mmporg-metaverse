@@ -17,6 +17,13 @@ public class NetworkManager : MonoBehaviour
     private readonly Queue<string> messageQueue = new Queue<string>();
     private readonly object queueLock = new object();
 
+    // Cibles d'interpolation des voitures distantes (mises à jour à la réception)
+    private readonly Dictionary<int, Vector3> carTargetPos = new Dictionary<int, Vector3>();
+    private readonly Dictionary<int, float> carTargetRot = new Dictionary<int, float>();
+
+    private float positionSendTimer = 0f;
+    private const float PositionSendInterval = 0.05f; // 20 Hz
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -44,19 +51,31 @@ public class NetworkManager : MonoBehaviour
             if (msg == null) break;
             ProcessMessage(msg);
         }
+
+        // Interpolation des voitures chaque frame (pas seulement à la réception)
+        if (CarSyncManager.Instance != null)
+        {
+            foreach (var kvp in carTargetPos)
+            {
+                GameObject car = CarSyncManager.Instance.GetCar(kvp.Key);
+                if (car == null) continue;
+                car.transform.position = Vector3.Lerp(car.transform.position, kvp.Value, 15f * Time.deltaTime);
+                if (carTargetRot.TryGetValue(kvp.Key, out float rot))
+                    car.transform.rotation = Quaternion.Lerp(car.transform.rotation, Quaternion.Euler(0, rot, 0), 15f * Time.deltaTime);
+            }
+        }
     }
 
     public bool Connect(string ip, int port)
     {
         NetworkClient.DestinationIP = ip;
         NetworkClient.DestinationPort = port;
-        bool ok = NetworkClient.Connect(OnMessageReceived);
-        if (ok)
+        bool ok = NetworkClient.Connect(OnMessageReceived, () =>
         {
             Send($"CONNECT|{PlayerId}");
             Debug.Log($"Connecté en tant que {PlayerId}");
-        }
-        else
+        });
+        if (!ok)
             Debug.LogWarning("Connexion échouée.");
         return ok;
     }
@@ -104,24 +123,12 @@ public class NetworkManager : MonoBehaviour
             case "CAR_MOVE":
                 if (parts.Length < 6) return;
                 if (!int.TryParse(parts[1].Replace("car_", ""), out int carIndex)) return;
-                float carX = float.Parse(parts[2], CultureInfo.InvariantCulture);
-                float carY = float.Parse(parts[3], CultureInfo.InvariantCulture);
-                float carZ = float.Parse(parts[4], CultureInfo.InvariantCulture);
-                float carRot = float.Parse(parts[5], CultureInfo.InvariantCulture);
-                GameObject carObj = CarSyncManager.Instance?.GetCar(carIndex);
-                if (carObj != null)
-                {
-                    carObj.transform.position = Vector3.Lerp(
-                        carObj.transform.position,
-                        new Vector3(carX, carY, carZ),
-                        10f * Time.deltaTime
-                    );
-                    carObj.transform.rotation = Quaternion.Lerp(
-                        carObj.transform.rotation,
-                        Quaternion.Euler(0, carRot, 0),
-                        10f * Time.deltaTime
-                    );
-                }
+                carTargetPos[carIndex] = new Vector3(
+                    float.Parse(parts[2], CultureInfo.InvariantCulture),
+                    float.Parse(parts[3], CultureInfo.InvariantCulture),
+                    float.Parse(parts[4], CultureInfo.InvariantCulture)
+                );
+                carTargetRot[carIndex] = float.Parse(parts[5], CultureInfo.InvariantCulture);
                 return;
         }
 
@@ -145,6 +152,14 @@ public class NetworkManager : MonoBehaviour
                 {
                     GameObject go = Instantiate(RemotePlayerPrefab,
                         new Vector3(x, y, z), Quaternion.identity);
+
+                    // Supprimer les composants locaux : empêche les collisions voiture
+                    // d'affecter le score du joueur local via le singleton ScoreManager
+                    PlayerController pc = go.GetComponent<PlayerController>();
+                    if (pc != null) Destroy(pc);
+                    if (go.TryGetComponent(out Rigidbody rb))
+                        rb.isKinematic = true;
+
                     remotePlayers[id] = go;
                 }
 
@@ -163,10 +178,19 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    void OnDisable()
+    public void Disconnect()
     {
         if (NetworkClient != null && NetworkClient.IsConnected)
             Send($"DISCONNECT|{PlayerId}");
         NetworkClient?.Close();
+
+        foreach (var go in remotePlayers.Values)
+            if (go != null) Destroy(go);
+        remotePlayers.Clear();
+    }
+
+    void OnDisable()
+    {
+        Disconnect();
     }
 }

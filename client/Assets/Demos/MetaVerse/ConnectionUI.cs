@@ -23,8 +23,13 @@ public class ConnectionUI : MonoBehaviour
 
     public void OnConnectClick()
     {
-        string ip = IPInput.text;
-        int port = int.Parse(PortInput.text);
+        if (!int.TryParse(PortInput.text, out int port))
+        {
+            Debug.LogWarning("Port invalide.");
+            return;
+        }
+        string ip = IPInput.text.Trim();
+        if (string.IsNullOrEmpty(ip)) { Debug.LogWarning("IP invalide."); return; }
         NetworkManager.Instance.Connect(ip, port);
         Time.timeScale = 1f;
         gameObject.SetActive(false);
@@ -32,7 +37,11 @@ public class ConnectionUI : MonoBehaviour
 
     public void OnHostClick()
     {
-        int port = int.Parse(PortInput.text);
+        if (!int.TryParse(PortInput.text, out int port))
+        {
+            Debug.LogWarning("Port invalide.");
+            return;
+        }
         GameServer.Instance.StartServer(port);
         NetworkManager.Instance.Connect("127.0.0.1", port);
         Time.timeScale = 1f;

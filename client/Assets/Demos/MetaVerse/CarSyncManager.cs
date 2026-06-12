@@ -8,7 +8,7 @@ public class CarSyncManager : MonoBehaviour
 
     private List<GameObject> cars = new List<GameObject>();
     private float sendTimer = 0f;
-    private float sendInterval = 0.1f;
+    private const float sendInterval = 0.05f; // 20 Hz
 
     void Awake()
     {

@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
 public class TCPClient : MonoBehaviour
 {
@@ -9,27 +10,33 @@ public class TCPClient : MonoBehaviour
 
     TcpClient tcp;
     IPEndPoint localEP;
+    private readonly StringBuilder receiveBuffer = new StringBuilder();
 
     public delegate void TCPMessageReceive(string message);
 
     private TCPMessageReceive OnMessageReceive;
 
 
-    public bool Connect(TCPMessageReceive handler) {
+    public bool Connect(TCPMessageReceive handler, System.Action onConnected = null) {
         if (tcp != null) {
             Debug.LogWarning("Socket already initialized! Close it first.");
             return false;
         }
+        OnMessageReceive = handler;
+        tcp = new TcpClient();
+        tcp.NoDelay = true;
+        tcp.BeginConnect(DestinationIP, DestinationPort, OnConnectResult, onConnected);
+        return true;
+    }
+
+    private void OnConnectResult(System.IAsyncResult result) {
         try {
-            tcp = new TcpClient();
-            tcp.Connect(DestinationIP, DestinationPort);
-            OnMessageReceive = handler;
-            return true;
-        } catch (System.Exception ex)
-        {
-            Debug.LogWarning("Error creating connection: " + ex.Message);
+            tcp.EndConnect(result);
+            Debug.Log($"Connecté à {DestinationIP}:{DestinationPort}");
+            (result.AsyncState as System.Action)?.Invoke();
+        } catch (System.Exception ex) {
+            Debug.LogWarning("Connexion échouée : " + ex.Message);
             CloseTCP();
-            return false;
         }
     }
 
@@ -75,29 +82,28 @@ public class TCPClient : MonoBehaviour
         if (tcp == null) { return; }
 
         while (tcp.Available > 0)
-		{   
-            byte[] data = new byte[tcp.Available];
-			tcp.GetStream().Read(data, 0, tcp.Available);
-
-			try
-			{
-				ParseString(data);
-			}
-			catch (System.Exception ex)
-			{
-				Debug.LogWarning("Error receiving TCP message: " + ex.Message);
-			}
-		}
-    }
-
-    private void ParseString(byte[] bytes) {
-        string raw = System.Text.Encoding.UTF8.GetString(bytes);
-        foreach (string line in raw.Split('\n'))
         {
-            string trimmed = line.Trim();
-            if (trimmed.Length > 0)
-                OnMessageReceive.Invoke(trimmed);
+            int available = tcp.Available;
+            byte[] data = new byte[available];
+            int bytesRead = tcp.GetStream().Read(data, 0, available);
+            receiveBuffer.Append(Encoding.UTF8.GetString(data, 0, bytesRead));
         }
+
+        // Traite uniquement les lignes complètes (terminées par \n)
+        string buffered = receiveBuffer.ToString();
+        int newlineIndex;
+        while ((newlineIndex = buffered.IndexOf('\n')) >= 0)
+        {
+            string line = buffered.Substring(0, newlineIndex).Trim();
+            buffered = buffered.Substring(newlineIndex + 1);
+            if (line.Length > 0)
+            {
+                try { OnMessageReceive?.Invoke(line); }
+                catch (System.Exception ex) { Debug.LogWarning("Error receiving TCP message: " + ex.Message); }
+            }
+        }
+        receiveBuffer.Clear();
+        receiveBuffer.Append(buffered);
     }
 
     private void CloseTCP() {
