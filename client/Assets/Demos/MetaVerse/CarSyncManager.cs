@@ -29,8 +29,6 @@ public class CarSyncManager : MonoBehaviour
 
     void Update()
     {
-        if (GameServer.Instance == null || !GameServer.Instance.IsRunning) return;
-
         sendTimer += Time.deltaTime;
         if (sendTimer < sendInterval) return;
         sendTimer = 0f;
@@ -40,9 +38,21 @@ public class CarSyncManager : MonoBehaviour
             if (cars[i] == null) continue;
             Vector3 pos = cars[i].transform.position;
             float rotY = cars[i].transform.eulerAngles.y;
-            NetworkManager.Instance?.Send(string.Format(CultureInfo.InvariantCulture,
+
+            string message = string.Format(CultureInfo.InvariantCulture,
                 "CAR_MOVE|car_{0}|{1:F2}|{2:F2}|{3:F2}|{4:F2}",
-                i, pos.x, pos.y, pos.z, rotY));
+                i, pos.x, pos.y, pos.z, rotY);
+
+            // Si on est serveur, envoyer via GameServer
+            if (GameServer.Instance != null && GameServer.Instance.IsRunning)
+            {
+                GameServer.Instance.BroadcastAll(message);
+            }
+            // Sinon envoyer via NetworkManager (client)
+            else if (NetworkManager.Instance != null)
+            {
+                NetworkManager.Instance.Send(message);
+            }
         }
     }
 

@@ -10,7 +10,6 @@ using System.IO;
 public class GameServer : MonoBehaviour
 {
     public static GameServer Instance;
-
     public bool IsRunning => isRunning;
 
     private TcpListener serveur;
@@ -19,7 +18,6 @@ public class GameServer : MonoBehaviour
 
     private List<TcpClient> clients = new List<TcpClient>();
     private Dictionary<TcpClient, string> clientIds = new Dictionary<TcpClient, string>();
-
     private HashSet<string> collectedObjects = new HashSet<string>();
 
     private Queue<System.Action> mainThreadQueue = new Queue<System.Action>();
@@ -51,9 +49,8 @@ public class GameServer : MonoBehaviour
         serveur = new TcpListener(IPAddress.Any, port);
         serveur.Start();
 
-        // Log toutes les IPs locales pour que l'hôte puisse les partager avec ses amis
         string localIPs = GetLocalIPAddresses();
-        Debug.Log($"=== SERVEUR DÉMARRÉ ===\nPort : {port}\nIPs locales :\n{localIPs}\n=> Ton ami doit utiliser l'une de ces IPs pour rejoindre.");
+        Debug.Log($"=== SERVEUR DÉMARRÉ ===\nPort : {port}\nIPs locales :\n{localIPs}");
 
         serverThread = new Thread(AcceptClients);
         serverThread.IsBackground = true;
@@ -67,7 +64,6 @@ public class GameServer : MonoBehaviour
         {
             if (ni.OperationalStatus != OperationalStatus.Up) continue;
             if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
-
             foreach (UnicastIPAddressInformation addr in ni.GetIPProperties().UnicastAddresses)
             {
                 if (addr.Address.AddressFamily == AddressFamily.InterNetwork)
@@ -85,7 +81,9 @@ public class GameServer : MonoBehaviour
             {
                 TcpClient client = serveur.AcceptTcpClient();
                 lock (clients) { clients.Add(client); }
-                Debug.Log($"Nouveau joueur ! Total : {clients.Count}");
+                int count = clients.Count;
+                lock (mainThreadLock)
+                    mainThreadQueue.Enqueue(() => Debug.Log($"Nouveau joueur ! Total : {count}"));
 
                 Thread clientThread = new Thread(() => HandleClient(client));
                 clientThread.IsBackground = true;
@@ -108,13 +106,14 @@ public class GameServer : MonoBehaviour
                 string[] parts = line.Split('|');
                 string type = parts[0];
 
-                Debug.Log($"Reçu : {line}");
+                string logLine = line;
+                lock (mainThreadLock)
+                    mainThreadQueue.Enqueue(() => Debug.Log($"Reçu : {logLine}"));
 
                 switch (type)
                 {
                     case "CONNECT":
                         playerId = parts[1];
-                        // Envoie les joueurs déjà connectés au nouveau venu
                         lock (clientIds)
                         {
                             foreach (var kvp in clientIds)
@@ -145,7 +144,9 @@ public class GameServer : MonoBehaviour
         }
         catch
         {
-            Debug.Log($"Déconnexion brutale : {playerId}");
+            string logId = playerId;
+            lock (mainThreadLock)
+                mainThreadQueue.Enqueue(() => Debug.Log($"Déconnexion brutale : {logId}"));
         }
         finally
         {
@@ -169,11 +170,8 @@ public class GameServer : MonoBehaviour
             {
                 collectedObjects.Add(objectId);
                 BroadcastAll($"COLLECT_OK|{playerId}|{objectId}");
-
                 lock (mainThreadLock)
-                {
                     mainThreadQueue.Enqueue(() => StartCoroutine(ResetBonus(objectId, 5f)));
-                }
             }
             else
             {
@@ -186,35 +184,29 @@ public class GameServer : MonoBehaviour
     {
         yield return new WaitForSeconds(delay);
         lock (collectedObjects)
-        {
             collectedObjects.Remove(objectId);
-        }
         Debug.Log($"Bonus réinitialisé : {objectId}");
     }
 
-    void Broadcast(string message, TcpClient expediteur)
+    public void Broadcast(string message, TcpClient expediteur)
     {
         byte[] data = Encoding.UTF8.GetBytes(message + "\n");
         lock (clients)
         {
             foreach (TcpClient c in clients)
-            {
                 if (c != expediteur && c.Connected)
                     try { c.GetStream().Write(data, 0, data.Length); } catch { }
-            }
         }
     }
 
-    void BroadcastAll(string message)
+    public void BroadcastAll(string message)
     {
         byte[] data = Encoding.UTF8.GetBytes(message + "\n");
         lock (clients)
         {
             foreach (TcpClient c in clients)
-            {
                 if (c.Connected)
                     try { c.GetStream().Write(data, 0, data.Length); } catch { }
-            }
         }
     }
 
