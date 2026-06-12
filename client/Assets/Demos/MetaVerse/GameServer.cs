@@ -131,6 +131,14 @@ public class GameServer : MonoBehaviour
                         Broadcast(line, client);
                         break;
 
+                    case "SCORE":
+                        Broadcast(line, client);
+                        break;
+
+                    case "GAME_OVER":
+                        Broadcast(line, client);
+                        break;
+
                     case "DISCONNECT":
                         BroadcastAll(line);
                         break;
@@ -215,6 +223,8 @@ public class GameServer : MonoBehaviour
             }
         }
     }
+
+    public void SendToAll(string message) => BroadcastAll(message);
 
     void SendTo(TcpClient client, string message)
     {

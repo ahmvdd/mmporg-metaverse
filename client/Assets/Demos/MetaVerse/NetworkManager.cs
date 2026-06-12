@@ -9,6 +9,7 @@ public class NetworkManager : MonoBehaviour
     public string ServerIP = "127.0.0.1";
     public int ServerPort = 5555;
     public GameObject RemotePlayerPrefab;
+    public GameObject BonusPrefab;
     public TCPClient NetworkClient;
     public string PlayerId { get; private set; }
 
@@ -130,6 +131,14 @@ public class NetworkManager : MonoBehaviour
                 );
                 carTargetRot[carIndex] = float.Parse(parts[5], CultureInfo.InvariantCulture);
                 return;
+
+            case "BONUS_SPAWN":
+                if (parts.Length < 4) return;
+                float bx = float.Parse(parts[1], CultureInfo.InvariantCulture);
+                float by = float.Parse(parts[2], CultureInfo.InvariantCulture);
+                float bz = float.Parse(parts[3], CultureInfo.InvariantCulture);
+                BonusSpawner.Instance?.SpawnAt(bx, by, bz);
+                return;
         }
 
         string id = parts[1];
@@ -166,6 +175,19 @@ public class NetworkManager : MonoBehaviour
                 RemotePlayer rp = remotePlayers[id].GetComponent<RemotePlayer>();
                 if (rp != null)
                     rp.SetTarget(x, y, z, rot);
+                break;
+
+            case "SCORE":
+                if (parts.Length < 3) return;
+                if (remotePlayers.TryGetValue(id, out GameObject scoreTarget))
+                {
+                    if (int.TryParse(parts[2], out int remoteScore))
+                        scoreTarget.GetComponent<RemotePlayer>()?.UpdateScore(remoteScore);
+                }
+                break;
+
+            case "GAME_OVER":
+                ScoreManager.Instance?.OnOpponentWon();
                 break;
 
             case "DISCONNECT":

@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 
 public class RemotePlayer : MonoBehaviour
 {
@@ -7,11 +8,21 @@ public class RemotePlayer : MonoBehaviour
     private Vector3 velocity;
     private float lastUpdateTime;
 
+    private TMP_Text scoreLabel;
+
     void Start()
     {
         targetPosition = transform.position;
         targetRotationY = transform.eulerAngles.y;
         lastUpdateTime = Time.time;
+
+        scoreLabel = GetComponentInChildren<TMP_Text>();
+        if (scoreLabel != null) scoreLabel.text = "0";
+    }
+
+    public void UpdateScore(int score)
+    {
+        if (scoreLabel != null) scoreLabel.text = score.ToString();
     }
 
     void Update()

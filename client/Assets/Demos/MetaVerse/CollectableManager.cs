@@ -15,7 +15,7 @@ public class CollectableManager : MonoBehaviour
     public void OnCollectOK(string playerId, string bonusId)
 {
     if (playerId == NetworkManager.Instance?.PlayerId)
-        ScoreManager.Instance?.AddScore(1);
+        ScoreManager.Instance?.AddScore(20);
 
     Bonus[] allBonuses = FindObjectsByType<Bonus>(FindObjectsSortMode.None);
     foreach (Bonus b in allBonuses)
