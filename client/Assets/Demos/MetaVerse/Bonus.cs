@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Globalization;
 
 public class Bonus : MonoBehaviour
 {
@@ -8,18 +9,22 @@ public class Bonus : MonoBehaviour
 
     void Start()
     {
-        BonusId = gameObject.name + "_" + transform.position.x + "_" + transform.position.z;
+        BonusId = string.Format(CultureInfo.InvariantCulture,
+            "{0}_{1:F2}_{2:F2}", gameObject.name,
+            transform.position.x, transform.position.z);
+
+        if (CollectableManager.Instance != null)
+            CollectableManager.Instance.RegisterBonus(this);
     }
 
-    void Update() { }
-
-    private bool ShouldHandleObject(Collider other) {
+    private bool ShouldHandleObject(Collider other)
+    {
         return (CollisionLayers.value & (1 << other.gameObject.layer)) > 0;
     }
 
-    void OnTriggerEnter(Collider other) {
+    void OnTriggerEnter(Collider other)
+    {
         if (!ShouldHandleObject(other)) return;
-
         NetworkManager.Instance?.Send(
             $"COLLECT|{NetworkManager.Instance.PlayerId}|{BonusId}"
         );

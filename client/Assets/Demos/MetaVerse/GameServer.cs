@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Net;
 using System.Net.Sockets;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 using System.Collections.Generic;
@@ -10,32 +11,79 @@ public class GameServer : MonoBehaviour
 {
     public static GameServer Instance;
 
+    public bool IsRunning => isRunning;
+
     private TcpListener serveur;
     private Thread serverThread;
     private bool isRunning = false;
 
     private List<TcpClient> clients = new List<TcpClient>();
     private Dictionary<TcpClient, string> clientIds = new Dictionary<TcpClient, string>();
-
-    // Pour les race conditions sur les collectables
     private HashSet<string> collectedObjects = new HashSet<string>();
+
+    private Queue<System.Action> mainThreadQueue = new Queue<System.Action>();
+    private readonly object mainThreadLock = new object();
+    private float pingTimer = 0f;
+    private const float PingInterval = 5f;
 
     void Awake()
     {
         Instance = this;
     }
 
-    // Appelé par le bouton "Héberger" dans ConnectionUI
+    void Update()
+    {
+        while (true)
+        {
+            System.Action action = null;
+            lock (mainThreadLock)
+            {
+                if (mainThreadQueue.Count > 0)
+                    action = mainThreadQueue.Dequeue();
+            }
+            if (action == null) break;
+            action();
+        }
+
+        if (isRunning)
+        {
+            pingTimer += Time.deltaTime;
+            if (pingTimer >= PingInterval)
+            {
+                pingTimer = 0f;
+                BroadcastAll("PING");
+            }
+        }
+    }
+
     public void StartServer(int port = 5555)
     {
         isRunning = true;
         serveur = new TcpListener(IPAddress.Any, port);
         serveur.Start();
-        Debug.Log($"Serveur démarré sur le port {port}");
+
+        string localIPs = GetLocalIPAddresses();
+        Debug.Log($"=== SERVEUR DÉMARRÉ ===\nPort : {port}\nIPs locales :\n{localIPs}\n=> Ton ami doit utiliser l'une de ces IPs pour rejoindre.");
 
         serverThread = new Thread(AcceptClients);
         serverThread.IsBackground = true;
         serverThread.Start();
+    }
+
+    private string GetLocalIPAddresses()
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
+        {
+            if (ni.OperationalStatus != OperationalStatus.Up) continue;
+            if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+            foreach (UnicastIPAddressInformation addr in ni.GetIPProperties().UnicastAddresses)
+            {
+                if (addr.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    sb.AppendLine($"  [{ni.Name}] {addr.Address}");
+            }
+        }
+        return sb.Length > 0 ? sb.ToString() : "  (aucune IP trouvée)";
     }
 
     void AcceptClients()
@@ -69,13 +117,16 @@ public class GameServer : MonoBehaviour
                 string[] parts = line.Split('|');
                 string type = parts[0];
 
-                Debug.Log($"Reçu : {line}");
-
                 switch (type)
                 {
                     case "CONNECT":
                         playerId = parts[1];
-                        lock (clientIds) { clientIds[client] = playerId; }
+                        lock (clientIds)
+                        {
+                            foreach (var kv in clientIds)
+                                SendTo(client, $"CONNECT|{kv.Value}");
+                            clientIds[client] = playerId;
+                        }
                         Broadcast(line, client);
                         break;
 
@@ -89,6 +140,9 @@ public class GameServer : MonoBehaviour
 
                     case "COLLECT":
                         HandleCollect(parts, client);
+                        break;
+
+                    case "PONG":
                         break;
                 }
             }
@@ -108,7 +162,6 @@ public class GameServer : MonoBehaviour
         }
     }
 
-    // Race condition — premier arrivé premier servi
     void HandleCollect(string[] parts, TcpClient expediteur)
     {
         string playerId = parts[1];
@@ -120,12 +173,22 @@ public class GameServer : MonoBehaviour
             {
                 collectedObjects.Add(objectId);
                 BroadcastAll($"COLLECT_OK|{playerId}|{objectId}");
+                lock (mainThreadLock)
+                {
+                    mainThreadQueue.Enqueue(() => StartCoroutine(ResetBonus(objectId, 5f)));
+                }
             }
             else
             {
                 SendTo(expediteur, $"COLLECT_DENIED|{playerId}|{objectId}");
             }
         }
+    }
+
+    private System.Collections.IEnumerator ResetBonus(string objectId, float delay)
+    {
+        yield return new UnityEngine.WaitForSeconds(delay);
+        lock (collectedObjects) { collectedObjects.Remove(objectId); }
     }
 
     void Broadcast(string message, TcpClient expediteur)
@@ -141,7 +204,7 @@ public class GameServer : MonoBehaviour
         }
     }
 
-    void BroadcastAll(string message)
+    public void BroadcastAll(string message)
     {
         byte[] data = Encoding.UTF8.GetBytes(message + "\n");
         lock (clients)

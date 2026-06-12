@@ -14,6 +14,9 @@ public class NetworkManager : MonoBehaviour
 
     Dictionary<string, GameObject> remotePlayers = new Dictionary<string, GameObject>();
 
+    private readonly Queue<string> messageQueue = new Queue<string>();
+    private readonly object queueLock = new object();
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -26,6 +29,21 @@ public class NetworkManager : MonoBehaviour
     {
         if (NetworkClient == null)
             NetworkClient = GetComponent<TCPClient>();
+    }
+
+    void Update()
+    {
+        while (true)
+        {
+            string msg = null;
+            lock (queueLock)
+            {
+                if (messageQueue.Count > 0)
+                    msg = messageQueue.Dequeue();
+            }
+            if (msg == null) break;
+            ProcessMessage(msg);
+        }
     }
 
     public bool Connect(string ip, int port)
@@ -58,12 +76,34 @@ public class NetworkManager : MonoBehaviour
 
     void OnMessageReceived(string message)
     {
+        lock (queueLock) { messageQueue.Enqueue(message); }
+    }
+
+    void ProcessMessage(string message)
+    {
         string[] parts = message.Trim().Split('|');
         if (parts.Length < 2) return;
 
         string type = parts[0];
-        string id = parts[1];
 
+        switch (type)
+        {
+            case "PING":
+                Send("PONG");
+                return;
+
+            case "COLLECT_OK":
+                if (parts.Length < 3) return;
+                CollectableManager.Instance?.OnCollectOK(parts[1], parts[2]);
+                return;
+
+            case "COLLECT_DENIED":
+                if (parts.Length < 3) return;
+                CollectableManager.Instance?.OnCollectDenied(parts[1], parts[2]);
+                return;
+        }
+
+        string id = parts[1];
         if (id == PlayerId) return;
 
         switch (type)
@@ -86,20 +126,12 @@ public class NetworkManager : MonoBehaviour
 
                 if (!remotePlayers.ContainsKey(id))
                 {
-                    GameObject go = Instantiate(RemotePlayerPrefab,
-                        new Vector3(x, y, z), Quaternion.identity);
+                    GameObject go = Instantiate(RemotePlayerPrefab, new Vector3(x, y, z), Quaternion.identity);
                     remotePlayers[id] = go;
                 }
-                remotePlayers[id].transform.position = Vector3.Lerp(
-                    remotePlayers[id].transform.position,
-                    new Vector3(x, y, z),
-                    10f * Time.deltaTime
-                );
-                remotePlayers[id].transform.rotation = Quaternion.Lerp(
-                    remotePlayers[id].transform.rotation,
-                    Quaternion.Euler(0, rot, 0),
-                    10f * Time.deltaTime
-                );
+
+                RemotePlayer rp = remotePlayers[id].GetComponent<RemotePlayer>();
+                if (rp != null) rp.SetTarget(x, y, z, rot);
                 break;
 
             case "DISCONNECT":
@@ -108,16 +140,6 @@ public class NetworkManager : MonoBehaviour
                     Destroy(remotePlayers[id]);
                     remotePlayers.Remove(id);
                 }
-                break;
-
-            case "COLLECT_OK":
-                if (parts.Length < 3) return;
-                CollectableManager.Instance?.OnCollectOK(parts[1], parts[2]);
-                break;
-
-            case "COLLECT_DENIED":
-                if (parts.Length < 3) return;
-                CollectableManager.Instance?.OnCollectDenied(parts[1], parts[2]);
                 break;
         }
     }

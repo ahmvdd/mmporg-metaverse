@@ -1,3 +1,13 @@
 server/bin/
 server/obj/
 .DS_Store
+
+# Unity auto-générés — ne jamais commit
+Library/
+Temp/
+Logs/
+UserSettings/
+.vs/
+*.csproj
+*.sln
+*.slnx
