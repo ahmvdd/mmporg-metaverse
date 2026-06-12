@@ -91,6 +91,10 @@ public class NetworkManager : MonoBehaviour
 
         switch (type)
         {
+            case "PING":
+                Send("PONG");
+                return;
+
             case "COLLECT_OK":
                 if (parts.Length < 3) return;
                 CollectableManager.Instance?.OnCollectOK(parts[1], parts[2]);

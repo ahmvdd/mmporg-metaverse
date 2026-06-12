@@ -24,6 +24,8 @@ public class GameServer : MonoBehaviour
 
     private Queue<System.Action> mainThreadQueue = new Queue<System.Action>();
     private readonly object mainThreadLock = new object();
+    private float pingTimer = 0f;
+    private const float PingInterval = 5f;
 
     void Awake()
     {
@@ -42,6 +44,16 @@ public class GameServer : MonoBehaviour
             }
             if (action == null) break;
             action();
+        }
+
+        if (isRunning)
+        {
+            pingTimer += Time.deltaTime;
+            if (pingTimer >= PingInterval)
+            {
+                pingTimer = 0f;
+                BroadcastAll("PING");
+            }
         }
     }
 
@@ -108,8 +120,6 @@ public class GameServer : MonoBehaviour
                 string[] parts = line.Split('|');
                 string type = parts[0];
 
-                Debug.Log($"Reçu : {line}");
-
                 switch (type)
                 {
                     case "CONNECT":
@@ -138,6 +148,9 @@ public class GameServer : MonoBehaviour
 
                     case "COLLECT":
                         HandleCollect(parts, client);
+                        break;
+
+                    case "PONG":
                         break;
                 }
             }

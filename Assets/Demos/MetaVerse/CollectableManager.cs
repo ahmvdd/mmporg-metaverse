@@ -5,27 +5,25 @@ public class CollectableManager : MonoBehaviour
 {
     public static CollectableManager Instance { get; private set; }
 
-    private readonly object _lock = new object();
+    private readonly Dictionary<string, Bonus> bonusCache = new Dictionary<string, Bonus>();
 
     void Awake()
     {
         Instance = this;
     }
-    //changement ici aussi faut fixer au niveau du prefab bonus
-    public void OnCollectOK(string playerId, string bonusId)
-{
-    if (playerId == NetworkManager.Instance?.PlayerId)
-        ScoreManager.Instance?.AddScore(1);
 
-    Bonus[] allBonuses = FindObjectsByType<Bonus>(FindObjectsSortMode.None);
-    foreach (Bonus b in allBonuses)
+    public void RegisterBonus(Bonus b)
     {
-        if (b.BonusId == bonusId)
-        {
-            StartCoroutine(RespawnBonus(b.gameObject, 5f));
-            break;
-        }
+        bonusCache[b.BonusId] = b;
     }
+
+    public void OnCollectOK(string playerId, string bonusId)
+    {
+        if (playerId == NetworkManager.Instance?.PlayerId)
+            ScoreManager.Instance?.AddScore(1);
+
+        if (bonusCache.TryGetValue(bonusId, out Bonus b))
+            StartCoroutine(RespawnBonus(b.gameObject, 5f));
     }
 
     private System.Collections.IEnumerator RespawnBonus(GameObject bonus, float delay)

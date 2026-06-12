@@ -7,6 +7,7 @@ public class TCPClient : MonoBehaviour
     public string DestinationIP = "127.0.0.1";
 
     TcpClient tcp;
+    private string receiveBuffer = "";
 
     public delegate void TCPMessageReceive(string message);
 
@@ -87,26 +88,24 @@ public class TCPClient : MonoBehaviour
             int available = tcp.Available;
             byte[] data = new byte[available];
             int read = tcp.GetStream().Read(data, 0, available);
+            if (read > 0)
+                receiveBuffer += System.Text.Encoding.UTF8.GetString(data, 0, read);
+        }
 
+        int newlineIdx;
+        while ((newlineIdx = receiveBuffer.IndexOf('\n')) >= 0)
+        {
+            string line = receiveBuffer[..newlineIdx].Trim();
+            receiveBuffer = receiveBuffer[(newlineIdx + 1)..];
             try
             {
-                if (read > 0)
-                    ParseString(data, read);
+                if (line.Length > 0)
+                    OnMessageReceive?.Invoke(line);
             }
             catch (System.Exception ex)
             {
-                Debug.LogWarning("Error receiving TCP message: " + ex.Message);
+                Debug.LogWarning("Error processing TCP message: " + ex.Message);
             }
-        }
-    }
-
-    private void ParseString(byte[] bytes, int length = -1) {
-        string raw = System.Text.Encoding.UTF8.GetString(bytes, 0, length < 0 ? bytes.Length : length);
-        foreach (string line in raw.Split('\n'))
-        {
-            string trimmed = line.Trim();
-            if (trimmed.Length > 0)
-                OnMessageReceive.Invoke(trimmed);
         }
     }
 
@@ -116,5 +115,6 @@ public class TCPClient : MonoBehaviour
             tcp = null;
         }
         OnMessageReceive = null;
+        receiveBuffer = "";
     }
 }

@@ -12,9 +12,9 @@ public class Bonus : MonoBehaviour
         BonusId = string.Format(CultureInfo.InvariantCulture,
             "{0}_{1:F2}_{2:F2}", gameObject.name,
             transform.position.x, transform.position.z);
+        if (CollectableManager.Instance != null)
+            CollectableManager.Instance.RegisterBonus(this);
     }
-
-    void Update() { }
 
     private bool ShouldHandleObject(Collider other)
     {
