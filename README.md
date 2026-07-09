@@ -5,6 +5,7 @@ Jeu massivement multijoueur en temps réel développé avec Unity 6 et un serveu
 Projet réalisé dans le cadre du cours MMPORG — Glassworks Tech.
 
 ---
+<img width="1470" height="923" alt="Capture d’écran 2026-06-09 à 19 42 47" src="https://github.com/user-attachments/assets/45099ed9-3419-47b3-9c68-1065aabc59da" />
 
 ## 📋 Description
 
