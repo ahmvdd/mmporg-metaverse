@@ -15,6 +15,8 @@ sa propre machine. Les positions, actions et objets collectés sont
 synchronisés en temps réel via un protocole TCP custom.
 
 ---
+Video avant qu'on configure le tunel Tcp 
+https://youtu.be/jTDujALA998
 
 ## 🏗️ Architecture
 mmporg-metaverse/
